@@ -182,4 +182,30 @@ plot(varImp(m_c50,scale=F), top = 20)
 
 #https://topepo.github.io/caret/variable-importance.html
 
+library(kernlab)
+library(caret)
+m_svm = train(bap1Status ~., data = rnat6, method="svmRadial", metric="Kappa" )
+m_svm
+varImp(m_svm, scale=F)
+plot(varImp(m_svm, scale=F), top=20)
+genenames[c(2025,3719,281,208,1057,1307,291,215,1297,1926,3479,1093,1312,1111,2384,3310,1213,3652,1145,3294)]
+# [1] "LOC122654" "TTC21A"    "CHAC1"     "PXDC1"     "MYEOV"     "PADI1"     "CLEC11A"   "C7ORF13"  
+# [9] "P2X6"      "RCOR2"     "TMPPE"     "LOC158856" "PAIP2B"    "NDUFS2L"   "SGSM2"     "TIL"      
+# [17] "NR6A1"     "TRMU"      "C6orf63"   "TIPARP"  
+
+#bagging tree or supporter vector machine
+str(svmBag)
+svmBag$fit
+bagctrl = bagControl(fit = svmBag$fit,
+                     predict = svmBag$pred,
+                     aggregate = svmBag$aggregate
+                     )
+ctrl = trainControl(method = "cv", number = 10)
+set.seed(1001)
+m_treebag = train(bap1Status ~., data = rnat6, method="treebag", trControl = ctrl)
+m_svmbag = train(bap1Status ~., data = rnat6, method="bag", trControl = ctrl, bagControl=bagctrl)
+warnings() 
+m_svmbag
+varImp(m_svmbag, scale=F)
+plot(varImp(m_svmbag, scale=F), top=20)
 
