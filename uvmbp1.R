@@ -63,6 +63,7 @@ set.seed(1001)
 #Error in terms.formula(formula, data = data) : duplicated name 'UBE2Q2P3' in data frame using '.'
 rnat3=rnat2[,!duplicated(colnames(rnat2))]  #https://stackoverflow.com/questions/24142942/how-to-remove-duplicated-column-names-in-r
 
+# Remove columns with near zero variance.
 nzv=nearZeroVar(rnat3)
 rnat4=rnat3[,-nzv]
 nearZeroVar(rnat4)
@@ -265,4 +266,79 @@ warnings()
 m_svmbag
 varImp(m_svmbag, scale=F)
 plot(varImp(m_svmbag, scale=F), top=20)
+
+
+##neural network
+#https://gist.github.com/primaryobjects/d02b93f1e539a9dd2c85
+#https://stats.stackexchange.com/questions/21717/how-to-train-and-validate-a-neural-network-model-in-r
+library(parallel)
+detectCores()
+detectCores(all.tests = FALSE, logical = TRUE)
+#[1] 4
+library(caret)
+# install.packages("doParallel")
+library(doParallel)
+registerDoParallel(cores = 2)
+#load data
+load("~/Documents/myCode/Rscript/mygit/uvmbp1/rnat6.RData")
+# Set classification column to factor.
+str(rnat6$bap1Status)
+y = as.factor(make.names(rnat6$bap1Status))
+rnat6$bap1Status = y
+str(rnat6$bap1Status)
+
+# Removing constant features
+cat("\n## Removing the constants features.\n")
+for (f in names(rnat6)) {
+  if (length(unique(rnat6[[f]])) == 1) {
+    cat(f, "is constant in train. We delete it.\n")
+    rnat6[[f]] <- NULL
+    # test[[f]] <- NULL
+  }
+}
+
+## Removing identical features
+features_pair <- combn(names(rnat6), 2, simplify = F)
+toRemove <- c()
+for(pair in features_pair) {
+  f1 <- pair[1]
+  f2 <- pair[2]
+  
+  if (!(f1 %in% toRemove) & !(f2 %in% toRemove)) {
+    if (all(rnat6[[f1]] == rnat6[[f2]])) {
+      cat(f1, "and", f2, "are equals.\n")
+      toRemove <- c(toRemove, f2)
+    }
+  }
+}
+feature.names <- setdiff(names(rnat6), toRemove)
+rnat6 <- rnat6[, feature.names]
+# test <- test[, feature.names[feature.names != 'TARGET']]
+
+# inTrain <- createDataPartition(data$TARGET, p = 3/4)[[1]]
+# training <- data[inTrain,]
+# testing <- data[-inTrain,]
+
+numFolds <- trainControl(method = 'cv', number = 10, classProbs = TRUE, verboseIter = TRUE, summaryFunction = twoClassSummary, preProcOptions = list(thresh = 0.75, ICAcomp = 3, k = 5))
+set.seed(1001)
+#https://stackoverflow.com/questions/17105979/i-get-error-error-in-nnet-defaultx-y-w-too-many-77031-weights-whi
+#https://stackoverflow.com/questions/20339698/cons-of-setting-maxnwts-in-r-nnet-to-a-very-large-number
+fit2 <- train(bap1Status ~., data = rnat6, method = 'nnet', preProcess = c('center', 'scale'), trControl = numFolds, MaxNWts=10000)
+fit2 <- train(bap1Status ~., data = rnat6, method = 'nnet', preProcess = c('center', 'scale'), trControl = numFolds, tuneGrid=expand.grid(size=c(10), decay=c(0.1)))
+#in train function: linout=1 for regression; linout=0 for classification
+predicted_nnet <- predict(fit2, newdata=rnat6[, -c(4366)])
+conf1 <- confusionMatrix(predicted_nnet, rnat6$bap1Status)
+conf1
+save(fit2, file = "m_nnet.RData")
+
+probs <- predict(fit2, newdata=rnat6[, -c(4366)], type='prob')
+probs
+
+# Assemble output format: ID, prob.
+output <- data.frame(ID=test$ID)
+output <- cbind(output, TARGET=probs$X1)
+write.csv(output, file='output.csv', row.names=FALSE, quote=FALSE)
+
+
+
 
