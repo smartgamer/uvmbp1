@@ -121,7 +121,7 @@ tail(colnames(rnat6))
 
 fit_rf = randomForest(bap1Status~., data=rnat6)
 # fit_rf = randomForest(bap1Status~., data=rnat6[, 4300:4366]) 
-# rnat6$bap1Status=as.factor(rnat6$bap1Status) #change numeric to factor
+rnat6$bap1Status=as.factor(rnat6$bap1Status) #change numeric to factor
 # fit_rf = randomForest(bap1Status~., data=rnat6[, 4300:4366]) 
 # fit_rf = randomForest(bap1Status~., data=rnat6[, 3500:4366]) 
 
@@ -181,17 +181,56 @@ varImp(m_c50,scale=F)
 plot(varImp(m_c50,scale=F), top = 20)
 
 #https://topepo.github.io/caret/variable-importance.html
-
+#http://dataaspirant.com/2017/01/19/support-vector-machine-classifier-implementation-r-caret-package/
 library(kernlab)
 library(caret)
-m_svm = train(bap1Status ~., data = rnat6, method="svmRadial", metric="Kappa" )
-m_svm
-varImp(m_svm, scale=F)
-plot(varImp(m_svm, scale=F), top=20)
+load("~/mygit/uvmbp1/rnat6.RData")
+
+save(genenames, file="columnnames.RData")
+tail(genenames)
+save(nam, file="fakeColumnNames.RData")
+
+nam=paste("gene", as.character(seq_along(1:4365)), sep = "", collapse = NULL) #colnames have many symbols that are not allowed by random forest
+nam=c(nam, "bap1Status")
+colnames(rnat6)=nam
+tail(colnames(rnat6))
+str(rnat6$bap1Status)
+rnat6$bap1Status=as.factor(rnat6$bap1Status)
+#or
+rnat6[["bap1Status"]] = factor(rnat6[["bap1Status"]])
+anyNA(rnat6)  #check if any "NA" in data frame
+
+#Support Vector Machines with Linear Kernel 
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+set.seed(3233)
+svm_Linear <- train(bap1Status ~., data = rnat6, method = "svmLinear",
+                    trControl=trctrl,
+                    preProcess = c("center", "scale"),
+                    tuneLength = 10)
+svm_Linear
+save(svm_Linear, file="svm_Linear.RData")
+varImp(svm_Linear, scale = F)
+plot(varImp(svm_Linear, scale = F), top=20)
+
+
+
+
+#Support Vector Machines with Radial Basis Function Kernel 
+m_svmRadial <- train(bap1Status ~., data = rnat6, method = "svmRadial",
+                    trControl=trctrl,
+                    preProcess = c("center", "scale"),
+                    tuneLength = 10)
+m_svmRadial
+save(m_svmRadial, file="m_svmRadial.RData")
+varImp(m_svmRadial, scale=F)
+plot(varImp(m_svmRadial, scale=F), top=20)
 genenames[c(2025,3719,281,208,1057,1307,291,215,1297,1926,3479,1093,1312,1111,2384,3310,1213,3652,1145,3294)]
 # [1] "LOC122654" "TTC21A"    "CHAC1"     "PXDC1"     "MYEOV"     "PADI1"     "CLEC11A"   "C7ORF13"  
 # [9] "P2X6"      "RCOR2"     "TMPPE"     "LOC158856" "PAIP2B"    "NDUFS2L"   "SGSM2"     "TIL"      
 # [17] "NR6A1"     "TRMU"      "C6orf63"   "TIPARP"  
+
+
+
 
 #bagging tree or supporter vector machine
 str(svmBag)
@@ -203,6 +242,8 @@ bagctrl = bagControl(fit = svmBag$fit,
 ctrl = trainControl(method = "cv", number = 10)
 set.seed(1001)
 m_treebag = train(bap1Status ~., data = rnat6, method="treebag", trControl = ctrl)
+#Something is wrong; all the Accuracy metric values are missing:
+
 m_svmbag = train(bap1Status ~., data = rnat6, method="bag", trControl = ctrl, bagControl=bagctrl)
 warnings() 
 m_svmbag
