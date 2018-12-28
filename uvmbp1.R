@@ -211,7 +211,23 @@ svm_Linear
 save(svm_Linear, file="svm_Linear.RData")
 varImp(svm_Linear, scale = F)
 plot(varImp(svm_Linear, scale = F), top=20)
+predicted_svmlinear=predict(svm_Linear,rnat6[,-c(4366)])
+predicted_svmlinear
+confusionMatrix(predicted_svmlinear, rnat6$bap1Status)
+#We can also do some customizations for selecting C value(Cost) in Linear classifier. This can be done by inputting values in grid search.  The next code snippet will show you, building & tuning of an SVM classifier with different values of C. We are going to put some values of C using expand.grid() into “grid” dataframe. Next step is to use this dataframe for testing our classifier at specific C values. It needs to be put in train() method with tuneGrid parameter.
+grid <- expand.grid(C = c(0,0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2,5))
+set.seed(3233)
+svm_Linear_Grid <- train(bap1Status ~., data = rnat6, method = "svmLinear",
+                           trControl=trctrl,
+                           preProcess = c("center", "scale"),
+                           tuneGrid = grid,
+                           tuneLength = 10)
 
+svm_Linear_Grid
+plot(svm_Linear_Grid)
+predicted_svmlinearGrid=predict(svm_Linear_Grid,rnat6[,-c(4366)])
+predicted_svmlinearGrid
+confusionMatrix(predicted_svmlinearGrid, rnat6$bap1Status)
 
 
 
