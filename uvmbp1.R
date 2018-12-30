@@ -225,6 +225,7 @@ svm_Linear_Grid <- train(bap1Status ~., data = rnat6, method = "svmLinear",
                            tuneLength = 10)
 
 svm_Linear_Grid
+save(svm_Linear_Grid, file="svm_Linear_Grid.RData")
 plot(svm_Linear_Grid)
 predicted_svmlinearGrid=predict(svm_Linear_Grid,rnat6[,-c(4366)])
 predicted_svmlinearGrid
